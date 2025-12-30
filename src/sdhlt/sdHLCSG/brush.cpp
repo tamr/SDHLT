@@ -10,6 +10,33 @@ hullshape_t		g_hullshapes[MAX_HULLSHAPES];
 
 
 // =====================================================================================
+//  VectorCompareEpsilon
+//  Compares two vectors with a custom epsilon tolerance
+// =====================================================================================
+static bool VectorCompareEpsilon(const vec3_t v1, const vec3_t v2, vec_t epsilon)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        if (fabs(v1[i] - v2[i]) > epsilon)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// =====================================================================================
+//  SnapVertex
+//  Snaps v1 to v2's coordinates (modifies v1 in place)
+// =====================================================================================
+static void SnapVertex(vec_t* v1, const vec_t* v2)
+{
+    v1[0] = v2[0];
+    v1[1] = v2[1];
+    v1[2] = v2[2];
+}
+
+// =====================================================================================
 //  FindIntPlane, fast version (replacement by KGP)
 //	This process could be optimized by placing the planes in a (non hash-) set and using
 //	half of the inner loop check below as the comparator; I'd expect the speed gain to be
@@ -276,6 +303,8 @@ void ExpandBrushWithHullBrush (const brush_t *brush, const brushhull_t *hull0, c
 			// fill brushedge.normals[1]
 			int found;
 			found = 0;
+			bface_t *matched_face = NULL;
+			int matched_j = -1;
 			for (bface_t *f2 = hull0->faces; f2; f2 = f2->next)
 			{
 				for (int j = 0; j < f2->w->m_NumPoints; j++)
@@ -284,10 +313,40 @@ void ExpandBrushWithHullBrush (const brush_t *brush, const brushhull_t *hull0, c
 						VectorCompare (f2->w->m_Points[j], brushedge.vertexes[0]))
 					{
 						VectorCopy (f2->plane->normal, brushedge.normals[1]);
+						matched_face = f2;
+						matched_j = j;
 						found++;
 					}
 				}
 			}
+
+			// If exact match failed and healbrushes is enabled, try epsilon-based matching
+			if (found == 0 && g_healbrushes)
+			{
+				for (bface_t *f2 = hull0->faces; f2; f2 = f2->next)
+				{
+					for (int j = 0; j < f2->w->m_NumPoints; j++)
+					{
+						if (VectorCompareEpsilon(f2->w->m_Points[(j + 1) % f2->w->m_NumPoints], brushedge.vertexes[1], HEAL_BRUSH_EPSILON) &&
+							VectorCompareEpsilon(f2->w->m_Points[j], brushedge.vertexes[0], HEAL_BRUSH_EPSILON))
+						{
+							// Found a near-match - snap vertices to fix the geometry
+							SnapVertex(f2->w->m_Points[(j + 1) % f2->w->m_NumPoints], brushedge.vertexes[1]);
+							SnapVertex(f2->w->m_Points[j], brushedge.vertexes[0]);
+							VectorCopy (f2->plane->normal, brushedge.normals[1]);
+							matched_face = f2;
+							matched_j = j;
+							found++;
+							Developer(DEVELOPER_LEVEL_MESSAGE, "Healed brush edge (hullbrush): Entity %i, Brush %i (snapped vertices within %.3f units)\n",
+								brush->originalentitynum, brush->originalbrushnum, HEAL_BRUSH_EPSILON);
+							break;
+						}
+					}
+					if (found > 0)
+						break;
+				}
+			}
+
 			if (found != 1)
 			{
 				if (!warned)
@@ -551,25 +610,68 @@ void ExpandBrush(brush_t* brush, const int hullnum)
 
 				//brute force - need to check every other winding for common points -- if the points match, the
 				//other face is the one we need to look at.
+				int start_idx = -1;
+				int end_idx = -1;
 				for(other_face = brush->hulls[0].faces; other_face; other_face = other_face->next)
 				{
 					if(other_face == current_face)
 					{ continue; }
 					start_found = false;
 					end_found = false;
+					start_idx = -1;
+					end_idx = -1;
 					other_winding = other_face->w;
 					for(counter2 = 0; counter2 < other_winding->m_NumPoints; counter2++)
 					{
 						if(!start_found && VectorCompare(other_winding->m_Points[counter2],edge_start))
-						{ start_found = true; }
+						{ start_found = true; start_idx = counter2; }
 						if(!end_found && VectorCompare(other_winding->m_Points[counter2],edge_end))
-						{ end_found = true; }
+						{ end_found = true; end_idx = counter2; }
 						if(start_found && end_found)
 						{ break; } //we've found the face we want, move on to planar comparison
 					} // for each point in other winding
 					if(start_found && end_found)
 					{ break; } //we've found the face we want, move on to planar comparison
 				} // for each face
+
+				// If exact match failed and healbrushes is enabled, try epsilon-based matching
+				if(!other_face && g_healbrushes)
+				{
+					for(other_face = brush->hulls[0].faces; other_face; other_face = other_face->next)
+					{
+						if(other_face == current_face)
+						{ continue; }
+						start_found = false;
+						end_found = false;
+						start_idx = -1;
+						end_idx = -1;
+						other_winding = other_face->w;
+						for(counter2 = 0; counter2 < other_winding->m_NumPoints; counter2++)
+						{
+							if(!start_found && VectorCompareEpsilon(other_winding->m_Points[counter2], edge_start, HEAL_BRUSH_EPSILON))
+							{ start_found = true; start_idx = counter2; }
+							if(!end_found && VectorCompareEpsilon(other_winding->m_Points[counter2], edge_end, HEAL_BRUSH_EPSILON))
+							{ end_found = true; end_idx = counter2; }
+							if(start_found && end_found)
+							{ break; }
+						}
+						if(start_found && end_found)
+						{
+							// Found a near-match - snap vertices to fix the geometry
+							if(start_idx >= 0)
+							{
+								SnapVertex(other_winding->m_Points[start_idx], edge_start);
+							}
+							if(end_idx >= 0)
+							{
+								SnapVertex(other_winding->m_Points[end_idx], edge_end);
+							}
+							Developer(DEVELOPER_LEVEL_MESSAGE, "Healed brush edge: Entity %i, Brush %i (snapped vertices within %.3f units)\n",
+								brush->originalentitynum, brush->originalbrushnum, HEAL_BRUSH_EPSILON);
+							break;
+						}
+					}
+				}
 
 				if(!other_face)
 				{

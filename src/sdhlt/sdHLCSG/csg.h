@@ -57,6 +57,8 @@
 #define DEFAULT_NOUTF8 false
 #endif
 #define DEFAULT_NULLIFYTRIGGER true
+#define DEFAULT_HEALBRUSHES false
+#define HEAL_BRUSH_EPSILON 0.5 // Tolerance for snapping brush vertices
 
 // AJM: added in
 #define UNLESS(a)  if (!(a))
@@ -281,6 +283,7 @@ extern bool g_nolightopt;
 extern bool g_noutf8;
 #endif
 extern bool g_nullifytrigger;
+extern bool g_healbrushes;
 
 extern vec_t    g_tiny_threshold;
 extern vec_t    g_BrushUnionThreshold;

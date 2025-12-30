@@ -91,6 +91,14 @@ Temporary Items
 /src/sdhlt/sdRIPENT/Release/
 /src/sdhlt/sdRIPENT/Release_x64/
 
+# Linux build artifacts
+/src/sdhlt/bin/
+/src/sdhlt/sdHLCSG/release/
+/src/sdhlt/sdHLBSP/release/
+/src/sdhlt/sdHLVIS/release/
+/src/sdhlt/sdHLRAD/release/
+/src/sdhlt/sdRIPENT/release/
+
 /build/
 /tools/*
 !/tools/*.fgd

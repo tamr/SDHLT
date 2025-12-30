@@ -69,6 +69,7 @@ bool g_nolightopt = DEFAULT_NOLIGHTOPT;
 bool g_noutf8 = DEFAULT_NOUTF8;
 #endif
 bool g_nullifytrigger = DEFAULT_NULLIFYTRIGGER;
+bool g_healbrushes = DEFAULT_HEALBRUSHES;
 bool g_viewsurface = false;
 
 // =====================================================================================
@@ -2045,6 +2046,10 @@ int             main(const int argc, char** argv)
 		else if (!strcasecmp (argv[i], "-nonullifytrigger"))
 		{
 			g_nullifytrigger = false;
+		}
+		else if (!strcasecmp (argv[i], "-healbrushes"))
+		{
+			g_healbrushes = true;
 		}
         else if (argv[i][0] == '-')
         {
