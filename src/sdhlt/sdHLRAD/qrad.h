@@ -126,6 +126,8 @@
 
 	#define DEFAULT_TRANSTOTAL_HACK 0.2 //0.5 //vluzacn
 	#define DEFAULT_MINLIGHT 0
+	#define DEFAULT_FLOORLIGHT 0
+	#define FLOOR_NORMAL_THRESHOLD 0.7 // surface is considered a floor if normal.z >= this value
 	#define DEFAULT_TRANSFER_COMPRESS_TYPE FLOAT16
 	#define DEFAULT_RGBTRANSFER_COMPRESS_TYPE VECTOR32
 	#define DEFAULT_SOFTSKY true
@@ -447,6 +449,7 @@ extern vec3_t	g_jitter_hack;
 
 	extern float g_transtotal_hack;
 	extern unsigned char g_minlight;
+	extern unsigned char g_floorlight;
 	extern float_type g_transfer_compress_type;
 	extern vector_type g_rgbtransfer_compress_type;
 	extern bool g_softsky;
