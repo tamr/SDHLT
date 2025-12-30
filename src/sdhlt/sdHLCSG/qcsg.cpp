@@ -521,7 +521,7 @@ static void     SaveOutside(const brush_t* const b, const int hull, bface_t* out
 			f->texinfo = backnull? -1: texinfo;
 
             // swap point orders
-            for (i = 0; i < f->w->m_NumPoints / 2; i++)      // add points backwards
+            for (i = 0; i < (int)(f->w->m_NumPoints / 2); i++)      // add points backwards
             {
                 VectorCopy(f->w->m_Points[i], temp);
                 VectorCopy(f->w->m_Points[f->w->m_NumPoints - 1 - i], f->w->m_Points[i]);
