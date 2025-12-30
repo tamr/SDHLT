@@ -8,7 +8,7 @@
 model_t models[MAX_MODELS];
 int num_models;
 
-void LoadStudioModel( const char *modelname, const vec3_t origin, const vec3_t angles, const vec3_t scale, int body, int skin, int trace_mode )
+void LoadStudioModel( const char *modelname, const vec3_t origin, const vec3_t angles, const vec3_t scale, int body, int skin, int trace_mode, const char *entity_desc )
 {
 	if( num_models >= MAX_MODELS )
 	{
@@ -21,7 +21,7 @@ void LoadStudioModel( const char *modelname, const vec3_t origin, const vec3_t a
 
 	if (!q_exists(m->name))
 	{
-		Warning("LoadStudioModel: couldn't load %s\n", m->name);
+		Warning("LoadStudioModel: couldn't load %s\n  Entity: %s\n", m->name, entity_desc ? entity_desc : "unknown");
 		return;
 	}
 	LoadFile(m->name, (char**)&m->extradata);
@@ -113,11 +113,13 @@ void LoadStudioModels( void )
 
 	for( int i = 0; i < g_numentities; i++ )
 	{
-		const char *name, *model;
+		const char *name, *model, *targetname;
 		vec3_t origin, angles;
+		char entity_desc[512];
 
 		entity_t* e = &g_entities[i];
 		name = ValueForKey( e, "classname" );
+		targetname = ValueForKey( e, "targetname" );
 
 		if( !Q_stricmp( name, "env_static" ))
 		{
@@ -173,7 +175,13 @@ void LoadStudioModels( void )
 		if( xform[1] > 16.0f ) xform[1] = 16.0f;
 		if( xform[2] > 16.0f ) xform[2] = 16.0f;
 
-		LoadStudioModel( model, origin, angles, xform, body, skin, trace_mode );
+		// Build entity description for error messages
+		if( targetname && *targetname )
+			snprintf( entity_desc, sizeof(entity_desc), "%s \"%s\" at (%.0f %.0f %.0f)", name, targetname, origin[0], origin[1], origin[2] );
+		else
+			snprintf( entity_desc, sizeof(entity_desc), "%s at (%.0f %.0f %.0f)", name, origin[0], origin[1], origin[2] );
+
+		LoadStudioModel( model, origin, angles, xform, body, skin, trace_mode, entity_desc );
 	}
 
 	Log( "%i opaque studio models\n", num_models );
