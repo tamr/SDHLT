@@ -176,10 +176,37 @@ void LoadStudioModels( void )
 		if( xform[2] > 16.0f ) xform[2] = 16.0f;
 
 		// Build entity description for error messages
-		if( targetname && *targetname )
-			snprintf( entity_desc, sizeof(entity_desc), "%s \"%s\" at (%.0f %.0f %.0f)", name, targetname, origin[0], origin[1], origin[2] );
+		// For brush entities (model starts with "*"), calculate center from BSP model bounds
+		if( model[0] == '*' )
+		{
+			int modelnum = atoi( model + 1 );
+			if( modelnum >= 0 && modelnum < g_nummodels )
+			{
+				dmodel_t *dm = &g_dmodels[modelnum];
+				vec3_t center;
+				VectorAdd( dm->mins, dm->maxs, center );
+				VectorScale( center, 0.5, center );
+
+				if( targetname && *targetname )
+					snprintf( entity_desc, sizeof(entity_desc), "#%d %s \"%s\" (brush %s, center: %.0f %.0f %.0f)", i, name, targetname, model, center[0], center[1], center[2] );
+				else
+					snprintf( entity_desc, sizeof(entity_desc), "#%d %s (brush %s, center: %.0f %.0f %.0f)", i, name, model, center[0], center[1], center[2] );
+			}
+			else
+			{
+				if( targetname && *targetname )
+					snprintf( entity_desc, sizeof(entity_desc), "#%d %s \"%s\" (brush %s)", i, name, targetname, model );
+				else
+					snprintf( entity_desc, sizeof(entity_desc), "#%d %s (brush %s)", i, name, model );
+			}
+		}
 		else
-			snprintf( entity_desc, sizeof(entity_desc), "%s at (%.0f %.0f %.0f)", name, origin[0], origin[1], origin[2] );
+		{
+			if( targetname && *targetname )
+				snprintf( entity_desc, sizeof(entity_desc), "#%d %s \"%s\" at (%.0f %.0f %.0f)", i, name, targetname, origin[0], origin[1], origin[2] );
+			else
+				snprintf( entity_desc, sizeof(entity_desc), "#%d %s at (%.0f %.0f %.0f)", i, name, origin[0], origin[1], origin[2] );
+		}
 
 		LoadStudioModel( model, origin, angles, xform, body, skin, trace_mode, entity_desc );
 	}
