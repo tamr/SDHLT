@@ -1331,8 +1331,8 @@ hullbrush_t *CreateHullBrush (const brush_t *b)
 	int i;
 	int j;
 	int k;
-	int e;
-	int e2;
+	UINT32 e;
+	UINT32 e2;
 	vec3_t origin;
 	bool failed = false;
 

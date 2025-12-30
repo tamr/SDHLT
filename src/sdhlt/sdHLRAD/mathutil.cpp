@@ -146,9 +146,9 @@ void			snap_to_winding(const Winding& w, const dplane_t& plane, vec_t* const poi
 vec_t			snap_to_winding_noedge(const Winding& w, const dplane_t& plane, vec_t* const point, vec_t width, vec_t maxmove)
 {
 	int pass;
-	int numplanes;
+	UINT32 numplanes;
 	dplane_t *planes;
-	int x;
+	UINT32 x;
 	vec3_t v;
 	vec_t newwidth;
 	vec_t bestwidth;

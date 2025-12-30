@@ -85,7 +85,7 @@ static void		SetVisColumn (int patchnum, bool uncompressedcolumn[MAX_SPARSE_VISM
 			}
 			if (uncompressedcolumn[m]) // visible
 			{
-				if (m < patchnum)
+				if (m < (int)patchnum)
 				{
 					Error ("SetVisColumn: invalid parameter: m < patchnum");
 				}

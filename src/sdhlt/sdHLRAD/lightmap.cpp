@@ -19,7 +19,7 @@ bool TestFaceIntersect (intersecttest_t *t, int facenum)
 {
 	dface_t *f2 = &g_dfaces[facenum];
 	Winding *w = new Winding (*f2);
-	int k;
+	UINT32 k;
 	for (k = 0; k < w->m_NumPoints; k++)
 	{
 		VectorAdd (w->m_Points[k], g_face_offset[facenum], w->m_Points[k]);
@@ -3487,7 +3487,6 @@ void            BuildFacelights(const int facenum)
     int             lightmapheight;
     int             size;
 	vec3_t			spot2, normal2;
-	vec3_t			delta;
 	byte			pvs2[(MAX_MAP_LEAFS + 7) / 8];
 	int				thisoffset2 = -1, lastoffset2 = -1;
 
