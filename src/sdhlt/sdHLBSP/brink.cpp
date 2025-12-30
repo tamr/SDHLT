@@ -3,9 +3,10 @@
 
 #include <list>
 #include <map>
+#include <set>
 #include <vector>
 
-// TODO: we should consider corners in addition to brinks.
+// Corner analysis has been implemented (see AnalyzeCorners function).
 // TODO: use bcircle_t structure only to find out all possible "movement"s, then send then down the bsp tree to determine which leafs may incorrectly block the movement.
 
 // The image of a typical buggy brink (with type BrinkFloorBlocking):
@@ -77,6 +78,70 @@ typedef struct
 	struct btreeedge_s *edge; // only for use in deciding brink type
 }
 bbrink_t;
+
+// Corner analysis structures (for fixing sticky corners where 3+ edges meet)
+typedef struct bcorner_s
+{
+	vec3_t position;           // Corner location
+	int numnodes;              // BSP nodes around corner
+	std::vector< bbrinknode_t > *nodes;
+	struct btreepoint_s *point; // Reference to tree point
+}
+bcorner_t;
+
+bcorner_t *CreateCorner (vec3_t pos, struct btreepoint_s *tp)
+{
+	bcorner_t *c;
+	hlassume (c = (bcorner_t *)malloc (sizeof (bcorner_t)), assume_NoMemory);
+	VectorCopy (pos, c->position);
+	c->point = tp;
+	c->numnodes = 1;
+	c->nodes = new std::vector< bbrinknode_t >;
+	bbrinknode_t newnode;
+	newnode.isleaf = true;
+	newnode.clipnode = NULL;
+	c->nodes->push_back (newnode);
+	return c;
+}
+
+void DeleteCorner (bcorner_t *c)
+{
+	delete c->nodes;
+	free (c);
+}
+
+void CornerSplitClipnode (bcorner_t *c, const dplane_t *plane, int planenum, bclipnode_t *prev, bclipnode_t *n0, bclipnode_t *n1)
+{
+	// Similar to BrinkSplitClipnode but for corners
+	int found;
+	int numfound = 0;
+	for (int i = 0; i < c->numnodes; i++)
+	{
+		bbrinknode_t *node = &(*c->nodes)[i];
+		if (node->isleaf && node->clipnode == prev)
+		{
+			found = i;
+			numfound++;
+		}
+	}
+	if (numfound < 1)
+	{
+		return; // the split plane doesn't pass through the corner
+	}
+	if (numfound > 1)
+	{
+		PrintOnce ("CornerSplitClipnode: internal error");
+		hlassume (false, assume_first);
+	}
+
+	// Determine which side of the plane the corner is on
+	vec_t dot = DotProduct (c->position, plane->normal) - plane->dist;
+	int cornerside = (dot >= 0) ? 0 : 1; // 0 = front, 1 = back
+
+	// Replace the leaf with the appropriate child
+	bbrinknode_t *node = &(*c->nodes)[found];
+	node->clipnode = (cornerside == 0) ? n0 : n1;
+}
 
 bbrink_t *CopyBrink (bbrink_t *other)
 {
@@ -1133,6 +1198,8 @@ typedef struct bbrinkinfo_s
 	btreeleaf_t *leaf_outside;
 	int numbrinks;
 	bbrink_t **brinks;
+	int numcorners;
+	bcorner_t **corners;
 }
 bbrinkinfo_t;
 
@@ -1296,6 +1363,92 @@ void CollectBrinks (bbrinkinfo_t *info)
 void FreeBrinks (bbrinkinfo_t *info)
 {
 	free (info->brinks);
+}
+
+// Corner collection - collect corners where 3+ edges meet
+void CollectCorners_r (bclipnode_t *node, int &numcorners, bcorner_t **corners)
+{
+	if (node->isleaf)
+	{
+		btreeface_l::iterator fi;
+		btreeedge_l::iterator ei;
+		for (fi = node->treeleaf->faces->begin (); fi != node->treeleaf->faces->end (); fi++)
+		{
+			for (ei = fi->f->edges->begin (); ei != fi->f->edges->end (); ei++)
+			{
+				// Check both endpoints of each edge
+				for (int side = 0; side < 2; side++)
+				{
+					btreepoint_t *tp = GetPointFromEdge (ei->e, side);
+					if (tp->tmp_tested || tp->infinite)
+						continue;
+					tp->tmp_tested = true;
+
+					// Only analyze corners with 3+ edges (complex junctions)
+					if (tp->edges->size () >= 3)
+					{
+						if (corners != NULL)
+						{
+							corners[numcorners] = CreateCorner (tp->v, tp);
+							// Split the corner through all adjacent clipnodes
+							for (btreeedge_l::iterator ei2 = tp->edges->begin (); ei2 != tp->edges->end (); ei2++)
+							{
+								for (btreeface_l::iterator fi2 = ei2->e->faces->begin (); fi2 != ei2->e->faces->end (); fi2++)
+								{
+									if (fi2->f->infinite)
+										continue;
+									btreeleaf_t *leaf0 = GetLeafFromFace (fi2->f, false);
+									btreeleaf_t *leaf1 = GetLeafFromFace (fi2->f, true);
+									if (!leaf0->infinite && !leaf1->infinite)
+									{
+										CornerSplitClipnode (corners[numcorners], fi2->f->plane, fi2->f->planenum,
+											NULL, leaf0->clipnode, leaf1->clipnode);
+									}
+								}
+							}
+						}
+						numcorners++;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		CollectCorners_r (node->children[0], numcorners, corners);
+		CollectCorners_r (node->children[1], numcorners, corners);
+	}
+}
+
+void CollectCorners (bbrinkinfo_t *info)
+{
+	info->numcorners = 0;
+	ClearMarks_r (&info->clipnodes[0]);
+	CollectCorners_r (&info->clipnodes[0], info->numcorners, NULL);
+	if (info->numcorners > 0)
+	{
+		hlassume (info->corners = (bcorner_t **)malloc (info->numcorners * sizeof (bcorner_t *)), assume_NoMemory);
+		info->numcorners = 0;
+		ClearMarks_r (&info->clipnodes[0]);
+		CollectCorners_r (&info->clipnodes[0], info->numcorners, info->corners);
+	}
+	else
+	{
+		info->corners = NULL;
+	}
+	Developer (DEVELOPER_LEVEL_MESSAGE, "Collected %d corners for analysis\n", info->numcorners);
+}
+
+void FreeCorners (bbrinkinfo_t *info)
+{
+	if (info->corners)
+	{
+		for (int i = 0; i < info->numcorners; i++)
+		{
+			DeleteCorner (info->corners[i]);
+		}
+		free (info->corners);
+	}
 }
 
 struct bwedge_s;
@@ -1721,6 +1874,126 @@ void AnalyzeBrinks (bbrinkinfo_t *info)
 	Developer (DEVELOPER_LEVEL_MESSAGE, "brinks: good = %d skipped = %d fixed = %d invalid = %d\n", countgood, countskipped, countfixed, countinvalid);
 }
 
+// Analyze corners for collision/visual mismatches
+void AnalyzeCorners (bbrinkinfo_t *info)
+{
+	int countgood = 0;
+	int countskipped = 0;
+	int countfixed = 0;
+
+	for (int i = 0; i < info->numcorners; i++)
+	{
+		bcorner_t *c = info->corners[i];
+		btreepoint_t *tp = c->point;
+
+		if (tp == NULL || tp->infinite)
+		{
+			countskipped++;
+			continue;
+		}
+
+		// Collect all adjacent leaves and their contents
+		bool hasSolid = false;
+		bool hasEmpty = false;
+		bool hasFloor = false;
+		vec3_t vup = {0, 0, 1};
+
+		std::set<bclipnode_t*> adjacentLeaves;
+
+		for (btreeedge_l::iterator ei = tp->edges->begin (); ei != tp->edges->end (); ei++)
+		{
+			if (ei->e->infinite)
+				continue;
+
+			for (btreeface_l::iterator fi = ei->e->faces->begin (); fi != ei->e->faces->end (); fi++)
+			{
+				if (fi->f->infinite)
+					continue;
+
+				for (int side = 0; side < 2; side++)
+				{
+					btreeleaf_t *leaf = GetLeafFromFace (fi->f, side);
+					if (!leaf->infinite && leaf->clipnode != NULL)
+					{
+						adjacentLeaves.insert (leaf->clipnode);
+
+						if (leaf->clipnode->content == CONTENTS_SOLID)
+							hasSolid = true;
+						else
+							hasEmpty = true;
+
+						// Check if this is a floor surface
+						vec3_t normal;
+						VectorScale (fi->f->plane->normal, fi->f->planeside ? -1.0 : 1.0, normal);
+						if (DotProduct (normal, vup) > BRINK_FLOOR_THRESHOLD)
+						{
+							if (side == 0 && leaf->clipnode->content != CONTENTS_SOLID)
+								hasFloor = true; // Empty side of an upward-facing surface
+						}
+					}
+				}
+			}
+		}
+
+		// If we have both solid and empty leaves, there's a potential issue
+		if (hasSolid && hasEmpty)
+		{
+			// Add partition planes to fix corner stickiness
+			// For each solid leaf adjacent to the corner, add planes from neighboring empty leaves
+			for (btreeedge_l::iterator ei = tp->edges->begin (); ei != tp->edges->end (); ei++)
+			{
+				if (ei->e->infinite)
+					continue;
+
+				for (btreeface_l::iterator fi = ei->e->faces->begin (); fi != ei->e->faces->end (); fi++)
+				{
+					if (fi->f->infinite)
+						continue;
+
+					btreeleaf_t *leaf0 = GetLeafFromFace (fi->f, false);
+					btreeleaf_t *leaf1 = GetLeafFromFace (fi->f, true);
+
+					if (leaf0->infinite || leaf1->infinite)
+						continue;
+
+					// If one side is solid and other is empty, this face is a transition
+					bool side0Solid = (leaf0->clipnode->content == CONTENTS_SOLID);
+					bool side1Solid = (leaf1->clipnode->content == CONTENTS_SOLID);
+
+					if (side0Solid != side1Solid)
+					{
+						// Add partition to the solid side to help fix corner stickiness
+						bclipnode_t *solidLeaf = side0Solid ? leaf0->clipnode : leaf1->clipnode;
+						bool planeside = side0Solid ? fi->f->planeside : !fi->f->planeside;
+
+						// Determine brink type based on floor detection
+						bbrinklevel_e brinktype = hasFloor ? BrinkWall : BrinkAny;
+
+						// Check if this is a floor-blocking corner
+						vec3_t normal;
+						VectorScale (fi->f->plane->normal, planeside ? -1.0 : 1.0, normal);
+						if (DotProduct (normal, vup) > BRINK_FLOOR_THRESHOLD)
+						{
+							brinktype = BrinkFloorBlocking;
+						}
+
+						if (AddPartition (solidLeaf, fi->f->planenum, planeside, CONTENTS_EMPTY, brinktype))
+						{
+							countfixed++;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			countgood++;
+		}
+	}
+
+	Developer (DEVELOPER_LEVEL_MESSAGE, "corners: good = %d skipped = %d fixed = %d\n", countgood, countskipped, countfixed);
+}
+
 void DeleteClipnodes (bbrinkinfo_t *info)
 {
 	for (int i = 0; i < info->numclipnodes; i++)
@@ -1815,9 +2088,17 @@ void *CreateBrinkinfo (const dclipnode_t *clipnodes, int headnode)
 		hlassume (info = (bbrinkinfo_t *)malloc (sizeof (bbrinkinfo_t)), assume_NoMemory);
 		ExpandClipnodes (info, clipnodes, headnode);
 		BuildTreeCells (info);
+
+		// Edge analysis (brinks)
 		CollectBrinks (info);
 		AnalyzeBrinks (info);
 		FreeBrinks (info);
+
+		// Corner analysis (vertices where 3+ edges meet)
+		CollectCorners (info);
+		AnalyzeCorners (info);
+		FreeCorners (info);
+
 		DeleteTreeCells (info);
 		SortPartitions (info);
 	}
