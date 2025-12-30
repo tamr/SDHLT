@@ -100,6 +100,7 @@ bool		g_rgb_transfers = DEFAULT_RGB_TRANSFERS;
 
 float		g_transtotal_hack = DEFAULT_TRANSTOTAL_HACK;
 unsigned char g_minlight = DEFAULT_MINLIGHT;
+unsigned char g_floorlight = DEFAULT_FLOORLIGHT;
 float_type g_transfer_compress_type = DEFAULT_TRANSFER_COMPRESS_TYPE;
 vector_type g_rgbtransfer_compress_type = DEFAULT_RGBTRANSFER_COMPRESS_TYPE;
 bool g_softsky = DEFAULT_SOFTSKY;
@@ -2778,6 +2779,7 @@ static void     Usage()
     Log("   -rgbtransfers           : Enables RGB Transfers (for custom shadows)\n\n");
 
 	Log("   -minlight #    : Minimum final light (integer from 0 to 255)\n");
+	Log("   -floorlight #  : Minimum light on floors for entity lighting (0-255)\n");
 	{
 		int i;
 	Log("   -compress #    : compress tranfer (");
@@ -2972,6 +2974,7 @@ static void     Settings()
     Log("rgb transfers        [ %17s ] [ %17s ]\n", g_rgb_transfers ? "on" : "off", DEFAULT_RGB_TRANSFERS ? "on" : "off"); 
 
 	Log("minimum final light  [ %17d ] [ %17d ]\n", (int)g_minlight, (int)DEFAULT_MINLIGHT);
+	Log("floor light minimum  [ %17d ] [ %17d ]\n", (int)g_floorlight, (int)DEFAULT_FLOORLIGHT);
 	sprintf (buf1, "%d (%s)", g_transfer_compress_type, float_type_string[g_transfer_compress_type]);
 	sprintf (buf2, "%d (%s)", DEFAULT_TRANSFER_COMPRESS_TYPE, float_type_string[DEFAULT_TRANSFER_COMPRESS_TYPE]);
 	Log("size of transfer     [ %17s ] [ %17s ]\n", buf1, buf2);
@@ -3743,6 +3746,20 @@ int             main(const int argc, char** argv)
 				int v = atoi(argv[++i]);
 				v = qmax (0, qmin (v, 255));
 				g_minlight = (unsigned char)v;
+			}
+			else
+			{
+				Usage();
+			}
+		}
+
+		else if (!strcasecmp(argv[i], "-floorlight"))
+		{
+			if (i + 1 < argc)
+			{
+				int v = atoi(argv[++i]);
+				v = qmax (0, qmin (v, 255));
+				g_floorlight = (unsigned char)v;
 			}
 			else
 			{

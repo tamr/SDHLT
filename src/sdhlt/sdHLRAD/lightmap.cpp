@@ -4933,6 +4933,22 @@ void            FinalLightFace(const int facenum)
 			minlight = (minlight > 255) ? 255 : minlight;
 		}
 	}
+
+	// Apply floor light minimum for entity lighting
+	// Floor surfaces (upward-facing) need extra minimum light to prevent player blackout
+	if (g_floorlight > 0)
+	{
+		const dplane_t* faceplane = getPlaneFromFaceNumber(facenum);
+		if (faceplane->normal[2] >= FLOOR_NORMAL_THRESHOLD)
+		{
+			// This is a floor surface - apply floor light minimum
+			if (g_floorlight > minlight)
+			{
+				minlight = g_floorlight;
+			}
+		}
+	}
+
 	original_basiclight = (vec3_t *)calloc (fl->numsamples, sizeof(vec3_t));
 	final_basiclight = (int (*)[3])calloc (fl->numsamples, sizeof(int [3]));
 	hlassume (original_basiclight != NULL, assume_NoMemory);
