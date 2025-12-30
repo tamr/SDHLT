@@ -32,7 +32,7 @@ int             FindTransferOffsetPatchnum(transfer_index_t* tIndex, const patch
         }
         else
         {
-            unsigned        x;
+            int             x;
             unsigned int    rval = 0;
             transfer_index_t* pIndex = tIndex;
 
@@ -182,7 +182,6 @@ void            MakeScales(const int threadnum)
     float           trans;
     patch_t*        patch;
     patch_t*        patch2;
-    float           send;
     vec3_t          origin;
     vec_t           area;
     const vec_t*    normal1;
@@ -376,7 +375,7 @@ void            MakeScales(const int threadnum)
         // copy the transfers out
         if (patch->iData)
         {
-			unsigned	data_size = patch->iData * float_size[g_transfer_compress_type] + unused_size;
+			size_t	data_size = patch->iData * float_size[g_transfer_compress_type] + unused_size;
 
             patch->tData = (transfer_data_t*)AllocBlock(data_size);
             patch->tIndex = CompressTransferIndicies(tIndex_All, patch->iData, &patch->iIndex);
@@ -450,7 +449,6 @@ void            MakeRGBScales(const int threadnum)
     float           trans_one;
     patch_t*        patch;
     patch_t*        patch2;
-    float           send;
     vec3_t          origin;
     vec_t           area;
     const vec_t*    normal1;
@@ -649,7 +647,7 @@ void            MakeRGBScales(const int threadnum)
         // copy the transfers out
         if (patch->iData)
         {
-			unsigned	data_size = patch->iData * vector_size[g_rgbtransfer_compress_type] + unused_size;
+			size_t	data_size = patch->iData * vector_size[g_rgbtransfer_compress_type] + unused_size;
 
             patch->tRGBData = (rgb_transfer_data_t*)AllocBlock(data_size);
             patch->tIndex = CompressTransferIndicies(tIndex_All, patch->iData, &patch->iIndex);

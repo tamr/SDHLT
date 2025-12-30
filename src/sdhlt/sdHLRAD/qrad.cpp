@@ -634,7 +634,7 @@ static bool     PlacePatchInside(patch_t* patch)
 		}
 	}
 	{
-		for (int i = 0; i < patch->winding->m_NumPoints; i++)
+		for (unsigned int i = 0; i < patch->winding->m_NumPoints; i++)
 		{
 			const vec_t *p1;
 			const vec_t *p2;
@@ -685,7 +685,7 @@ static void		UpdateEmitterInfo (patch_t *patch)
 	const vec_t *origin = patch->origin;
 	const Winding *winding = patch->winding;
 	vec_t radius = ON_EPSILON;
-	for (int x = 0; x < winding->m_NumPoints; x++)
+	for (unsigned int x = 0; x < winding->m_NumPoints; x++)
 	{
 		vec3_t delta;
 		vec_t dist;
@@ -770,7 +770,7 @@ static void     cutWindingWithGrid (patch_t *patch, const dplane_t *plA, const d
 
 		minA = minB = BOGUS_RANGE;
 		maxA = maxB = -BOGUS_RANGE;
-		for (int x = 0; x < winding->m_NumPoints; x++)
+		for (unsigned int x = 0; x < winding->m_NumPoints; x++)
 		{
 			vec_t *point;
 			vec_t dotA;
@@ -1403,7 +1403,7 @@ static void     MakePatchForFace(const int fn, Winding* w, int style
 			}
 			else
 			{
-				int x;
+				unsigned int x;
 				for (x = 0; x < g_opaque_face_count; x++)
 				{
 					opaqueList_t *op = &g_opaque_face_list[x];
@@ -1685,7 +1685,8 @@ static void		LoadOpaqueEntities()
 	}
 	{
 		Log("%i opaque models\n", g_opaque_face_count);
-		int i, facecount;
+		unsigned int i;
+		int facecount;
 
 		for (facecount = 0, i = 0; i < g_opaque_face_count; i++)
 		{
@@ -2557,9 +2558,6 @@ static void ExtendLightmapBuffer ()
 // =====================================================================================
 static void     RadWorld()
 {
-    unsigned        i;
-    unsigned        j;
-
     MakeBackplanes();
     MakeParents(0, -1);
     MakeTnodes(&g_dmodels[0]);
@@ -2579,7 +2577,8 @@ static void     RadWorld()
 		{
 			const int pos_count = 15;
 			const vec3_t pos[pos_count] = {{0,0,0},{1,0,0},{0,1,0},{-1,0,0},{0,-1,0},{1,0,0},{0,0,1},{-1,0,0},{0,0,-1},{0,-1,0},{0,0,1},{0,1,0},{0,0,-1},{1,0,0},{0,0,0}};
-			int j, k;
+			unsigned int j;
+			int k;
 			patch_t *patch;
 			vec3_t v;
 			for (j = 0, patch = g_patches; j < g_num_patches; j++, patch++)

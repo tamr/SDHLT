@@ -138,10 +138,9 @@ static void     TestPatchToFace(const unsigned patchnum, const int facenum, cons
 static void     BuildVisLeafs(int threadnum)
 {
     int             i;
-    int             lface, facenum, facenum2;
+    int             facenum, facenum2;
     byte            pvs[(MAX_MAP_LEAFS + 7) / 8];
     dleaf_t*        srcleaf;
-    dleaf_t*        leaf;
     patch_t*        patch;
     int             head;
     unsigned        bitpos;

@@ -148,7 +148,7 @@ vec_t			snap_to_winding_noedge(const Winding& w, const dplane_t& plane, vec_t* c
 	int pass;
 	int numplanes;
 	dplane_t *planes;
-	int x;
+	unsigned int x;
 	vec3_t v;
 	vec_t newwidth;
 	vec_t bestwidth;
@@ -296,7 +296,7 @@ bool            TestSegmentAgainstOpaqueList(const vec_t* p1, const vec_t* p2
 					, int &opaquestyleout // light must convert to this style. -1 = no convert
 					)
 	{
-		int x;
+		unsigned int x;
 		VectorFill (scaleout, 1.0);
 		opaquestyleout = -1;
 	    for (x = 0; x < g_opaque_face_count; x++)
@@ -535,7 +535,7 @@ void GetAlternateOrigin (const vec3_t pos, const vec3_t normal, const patch_t *p
 			}
 			if (!found)
 			{
-				for (int i = 0; i < w.m_NumPoints; i++)
+				for (unsigned int i = 0; i < w.m_NumPoints; i++)
 				{
 					const vec_t *p1;
 					const vec_t *p2;

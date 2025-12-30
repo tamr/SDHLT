@@ -157,7 +157,7 @@ surfacetree_t;
 
 void BuildSurfaceTree_r (surfacetree_t *tree, surfacetreenode_t *node)
 {
-	node->size = node->leaffaces->size ();
+	node->size = (int)node->leaffaces->size ();
 	node->size_discardable = 0;
 	if (node->size == 0)
 	{
@@ -396,7 +396,7 @@ static surface_t* ChooseMidPlaneFromList(surface_t* surfaces, const vec3_t mins,
 										 , int detaillevel
 										 )
 {
-    int             j, l;
+    int             l;
     surface_t*      p;
     surface_t*      bestsurface;
     vec_t           bestvalue;
@@ -518,7 +518,6 @@ static surface_t* ChoosePlaneFromList(surface_t* surfaces, const vec3_t mins, co
 									  )
 {
 	surface_t*      p;
-	surface_t*      p2;
 	surface_t*      bestsurface;
 	vec_t           bestvalue;
 	vec_t           value;
@@ -1480,7 +1479,7 @@ static bool     CalcNodeBounds(node_t* node
         }
         next_portal = p->next[side];
 
-        for (i = 0; i < p->winding->m_NumPoints; i++)
+        for (i = 0; i < (int)p->winding->m_NumPoints; i++)
         {
             for (j = 0; j < 3; j++)
             {

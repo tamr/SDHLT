@@ -1026,7 +1026,7 @@ unsigned int    CountEngineEntities()
     entity_t*       mapent = g_entities;
 
     // for each entity in the map
-    for (x=0; x<g_numentities; x++, mapent++)
+    for (x=0; x<(unsigned int)g_numentities; x++, mapent++)
     {
         const char* classname = ValueForKey(mapent, "classname");
 

@@ -299,7 +299,7 @@ q_threadfunction q_entry;
 
 static DWORD WINAPI ThreadEntryStub(LPVOID pParam)
 {
-    q_entry((int)pParam);
+    q_entry((int)(intptr_t)pParam);
     return 0;
 }
 
@@ -349,7 +349,7 @@ void            RunThreadsOn(int workcnt, bool showpacifier, q_threadfunction fu
         HANDLE          hThread = CreateThread(NULL,
                                                0,
                                                (LPTHREAD_START_ROUTINE) ThreadEntryStub,
-                                               (LPVOID) i,
+                                               (LPVOID)(intptr_t) i,
                                                CREATE_SUSPENDED,
                                                &threadid[i]);
 

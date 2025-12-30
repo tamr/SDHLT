@@ -348,7 +348,7 @@ void WriteDetailBrush (int hull, const bface_t *faces)
 	{
 		Winding *w = f->w;
 		fprintf (out_detailbrush[hull], "%i %u\n", f->planenum, w->m_NumPoints);
-		for (int i = 0; i < w->m_NumPoints; i++)
+		for (unsigned int i = 0; i < w->m_NumPoints; i++)
 		{
 			fprintf (out_detailbrush[hull], "%5.8f %5.8f %5.8f\n", w->m_Points[i][0], w->m_Points[i][1], w->m_Points[i][2]);
 		}
@@ -482,7 +482,7 @@ static void     SaveOutside(const brush_t* const b, const int hull, bface_t* out
 
 				// check for "Bad surface extents"
 				bool bad;
-				int i;
+				unsigned int i;
 				int j;
 				vec_t val;
 				
@@ -815,7 +815,7 @@ static void     CSGBrush(int brushnum)
 							continue;
 						}
 						int valid = 0;
-						int x;
+						unsigned int x;
 						for (x = 0; x < w->m_NumPoints; x++)
 						{
 							vec_t dist = DotProduct (w->m_Points[x], f2->plane->normal) - f2->plane->dist;
@@ -1375,7 +1375,7 @@ static void     CheckForNoClip()
 
 static void     ProcessModels()
 {
-    int             i, j, type;
+    int             i, j;
     int             placed;
     int             first, contents;
     brush_t         temp;

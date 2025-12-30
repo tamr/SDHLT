@@ -95,9 +95,9 @@ size_t Q_strncat( char *dst, const char *src, size_t size )
 	if( !dst || !src || !size )
 		return 0;
 
-	register char *d = dst;
-	register const char	*s = src;
-	register size_t n = size;
+	char *d = dst;
+	const char	*s = src;
+	size_t n = size;
 	size_t dlen;
 
 	// find the end of dst and adjust bytes left but don't go past end
@@ -126,9 +126,9 @@ size_t Q_strncpy( char *dst, const char *src, size_t size )
 	if( !dst || !src || !size )
 		return 0;
 
-	register char *d = dst;
-	register const char	*s = src;
-	register size_t n = size;
+	char *d = dst;
+	const char	*s = src;
+	size_t n = size;
 
 	// copy as many bytes as will fit
 	if( n != 0 && --n != 0 )
@@ -296,12 +296,12 @@ int Q_vsnprintf( char *buffer, size_t buffersize, const char *format, va_list ar
 
 	result = vsnprintf( buffer, buffersize, format, args );
 
-	if( result < 0 || result >= buffersize )
+	if( result >= buffersize )
 	{
 		buffer[buffersize - 1] = '\0';
 		return -1;
 	}
-	return result;
+	return (int)result;
 }
 
 int Q_snprintf( char *buffer, size_t buffersize, const char *format, ... )
@@ -331,7 +331,7 @@ int Q_sprintf( char *buffer, const char *format, ... )
 void Q_getwd( char *out, size_t len )
 {
 #ifdef WIN32
-	_getcwd( out, len );
+	_getcwd( out, (int)len );
 	Q_strncat( out, "\\", len );
 #else
 	getwd( out );

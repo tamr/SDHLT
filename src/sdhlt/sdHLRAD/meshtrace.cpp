@@ -394,7 +394,7 @@ bool TraceMesh :: DoTrace( void )
 	else
 	{
 		mfacet_t *facet = mesh->facets;
-		for( int i = 0; i < mesh->numfacets; i++, facet++ )
+		for( unsigned int i = 0; i < mesh->numfacets; i++, facet++ )
 		{
 			if( !BoundsIntersect( m_vecAbsMins, m_vecAbsMaxs, facet->mins, facet->maxs ))
 				continue;

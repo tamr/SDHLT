@@ -213,7 +213,7 @@ dleaf_t*        HuntForWorld(vec_t* point, const vec_t* plane_offset, const dpla
                     dist = DotProduct(delta, delta);
 
 					{
-						int x;
+						unsigned int x;
 						for (x = 0; x < g_opaque_face_count; x++)
 						{
 							if (TestPointOpaque (g_opaque_face_list[x].modelnum, g_opaque_face_list[x].origin, g_opaque_face_list[x].block, current_point))
@@ -621,7 +621,7 @@ void FindFacePositions (int facenum)
 	vec_t texmins[2], texmaxs[2];
 	int imins[2], imaxs[2];
 	int is, it;
-	int x;
+	unsigned int x;
 	int k;
 
 	f = &g_dfaces[facenum];
@@ -808,7 +808,7 @@ bool FindNearestPosition (int facenum, const Winding *texwinding, const dplane_t
 {
 	positionmap_t *map;
 	vec3_t original_st;
-	int x;
+	unsigned int x;
 	int itmin, itmax, ismin, ismax;
 	const vec3_t v_s = {1, 0, 0};
 	const vec3_t v_t = {0, 1, 0};

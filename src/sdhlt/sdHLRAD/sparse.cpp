@@ -22,7 +22,7 @@ sparse_column_t* s_vismatrix;
 static unsigned IsVisbitInArray(const unsigned x, const unsigned y)
 {
     int             first, last, current;
-    int             y_byte = y / 8;
+    unsigned        y_byte = y / 8;
     sparse_row_t*  row;
     sparse_column_t* column = s_vismatrix + x;
 
@@ -63,8 +63,8 @@ static unsigned IsVisbitInArray(const unsigned x, const unsigned y)
 static void		SetVisColumn (int patchnum, bool uncompressedcolumn[MAX_SPARSE_VISMATRIX_PATCHES])
 {
 	sparse_column_t *column;
-	int mbegin;
-	int m;
+	unsigned mbegin;
+	unsigned m;
 	int i;
 	unsigned int bits;
 	
@@ -297,10 +297,9 @@ static void     TestPatchToFace(const unsigned patchnum, const int facenum, cons
 static void     BuildVisLeafs(int threadnum)
 {
     int             i;
-    int             lface, facenum, facenum2;
+    int             facenum, facenum2;
     byte            pvs[(MAX_MAP_LEAFS + 7) / 8];
     dleaf_t*        srcleaf;
-    dleaf_t*        leaf;
     patch_t*        patch;
     int             head;
     unsigned        patchnum;
@@ -347,7 +346,7 @@ static void     BuildVisLeafs(int threadnum)
 				if (patch->leafnum != i)
 					continue;
 				patchnum = patch - g_patches;
-				for (int m = 0; m < g_num_patches; m++)
+				for (unsigned m = 0; m < g_num_patches; m++)
 				{
 					uncompressedcolumn[m] = false;
 				}

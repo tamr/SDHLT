@@ -1068,7 +1068,7 @@ static bool TestLineSegmentIntersectWall (const facetriangulation_t *facetrian, 
 
 static bool TestFarPatch (const localtriangulation_t *lt, const vec3_t p2, const Winding &p2winding)
 {
-	int i;
+	unsigned int i;
 	vec3_t v;
 	vec_t dist;
 	vec_t size1;

@@ -359,7 +359,7 @@ static portal_t* GetNextPortal()
 
         for (j = 0, tp = g_portals; j < g_numportals * 2; j++, tp++)
         {
-            if (tp->nummightsee < min && tp->status == stat_none)
+            if ((int)tp->nummightsee < min && tp->status == stat_none)
             {
                 min = tp->nummightsee;
                 p = tp;
@@ -537,7 +537,7 @@ static void LeafFlowNeighborAddLeaf(const int current, const int add, const int 
 
     auto leaf = &g_leafs[current];
 
-    for (int i = 0; i < leaf->numportals; i++)
+    for (int i = 0; i < (int)leaf->numportals; i++)
     {
         auto p = leaf->portals[i];
 
@@ -589,7 +589,7 @@ static void     LeafFlow(const int leafnum)
         {
             byte* dst = outbuffer;
             byte* src = p->visbits;
-            for (j=0; j<g_bitbytes; j++, dst++, src++)
+            for (j=0; j<(unsigned)g_bitbytes; j++, dst++, src++)
             {
                 *dst |= *src;
             }
@@ -645,7 +645,7 @@ static void     LeafFlow(const int leafnum)
 	memset (buffer2, 0, diskbytes);
 	for (i = 0; i < g_portalleafs; i++)
 	{
-		for (j = 0; j < g_leafcounts[i]; j++)
+		for (j = 0; j < (unsigned)g_leafcounts[i]; j++)
 		{
 			int srcofs = i >> 3;
 			int srcbit = 1 << (i & 7);
@@ -667,7 +667,7 @@ static void     LeafFlow(const int leafnum)
         Error("Vismap expansion overflow");
     }
 
-	for (j = 0; j < g_leafcounts[leafnum]; j++)
+	for (j = 0; j < (unsigned)g_leafcounts[leafnum]; j++)
 	{
 		g_dleafs[g_leafstarts[leafnum] + j + 1].visofs = dest - vismap;
 	}
@@ -963,7 +963,7 @@ static void     LoadPortals(char* portal_image)
 		Error ("Too many portalleafs (g_portalleafs(%d) > MAX_MAP_LEAFS(%d)).", g_portalleafs, MAX_MAP_LEAFS);
 	}
 	g_leafcount_all = 0;
-	for (i = 0; i < g_portalleafs; i++)
+	for (i = 0; i < (int)g_portalleafs; i++)
 	{
 		unsigned rval = 0;
 		token = strtok(NULL, seperators);
@@ -980,7 +980,7 @@ static void     LoadPortals(char* portal_image)
 	{ // internal error (this should never happen)
 		Error ("Corrupted leaf mapping (g_leafcount_all(%d) != g_dmodels[0].visleafs(%d)).", g_leafcount_all, g_dmodels[0].visleafs);
 	}
-	for (i = 0; i < g_portalleafs; i++)
+	for (i = 0; i < (int)g_portalleafs; i++)
 	{
 		for (j = 0; j < g_overview_count; j++)
 		{
@@ -1004,7 +1004,7 @@ static void     LoadPortals(char* portal_image)
 
             if (0 <= d1 && d1 < g_leafcounts[i])
             {
-                for (int k = 0; k < g_portalleafs; k++)
+                for (int k = 0; k < (int)g_portalleafs; k++)
                 {
                     int d2 = g_room[j].target_visleafnum - g_leafstarts[k];
 
@@ -1351,7 +1351,7 @@ void FixPrt(const char* portalfile)
     }
     inputFileStream.close();
 
-    portalFileLines = prtVector.size(); //Count lines before optimization
+    portalFileLines = (int)prtVector.size(); //Count lines before optimization
 
     auto itPortalCoords = std::find_if(
         prtVector.begin(),
@@ -1387,7 +1387,7 @@ void FixPrt(const char* portalfile)
         prtVector.begin() + 2,
         itPortalCoords);
 
-    optimizedPortalFileLines = prtVector.size(); //Count lines after optimization
+    optimizedPortalFileLines = (int)prtVector.size(); //Count lines after optimization
 
     Log("Reduced %i lines to %i\n", portalFileLines, optimizedPortalFileLines);
 

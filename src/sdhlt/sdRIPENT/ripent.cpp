@@ -574,7 +574,7 @@ static void		WriteTextures(const char* const name)
 					header.numlumps++;
 				}
 				fprintf (texfile, "[%d]", (int)strlen(tex->name));
-				SafeWrite (texfile, tex->name, strlen(tex->name));
+				SafeWrite (texfile, tex->name, (int)strlen(tex->name));
 				fprintf (texfile, " %d %d\r\n", tex->width, tex->height);
 			}
 		}

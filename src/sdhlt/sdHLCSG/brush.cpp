@@ -291,7 +291,7 @@ void ExpandBrushWithHullBrush (const brush_t *brush, const brushhull_t *hull0, c
 	// check for edge-edge type. edge-face type and face-edge type are excluded.
 	for (f = hull0->faces; f; f = f->next)
 	{
-		for (int i = 0; i < f->w->m_NumPoints; i++) // for each edge in f
+		for (unsigned int i = 0; i < f->w->m_NumPoints; i++) // for each edge in f
 		{
 			hullbrushedge_t brushedge;
 			VectorCopy (f->plane->normal, brushedge.normals[0]);
@@ -307,7 +307,7 @@ void ExpandBrushWithHullBrush (const brush_t *brush, const brushhull_t *hull0, c
 			int matched_j = -1;
 			for (bface_t *f2 = hull0->faces; f2; f2 = f2->next)
 			{
-				for (int j = 0; j < f2->w->m_NumPoints; j++)
+				for (unsigned int j = 0; j < f2->w->m_NumPoints; j++)
 				{
 					if (VectorCompare (f2->w->m_Points[(j + 1) % f2->w->m_NumPoints], brushedge.vertexes[1]) &&
 						VectorCompare (f2->w->m_Points[j], brushedge.vertexes[0]))
@@ -325,7 +325,7 @@ void ExpandBrushWithHullBrush (const brush_t *brush, const brushhull_t *hull0, c
 			{
 				for (bface_t *f2 = hull0->faces; f2; f2 = f2->next)
 				{
-					for (int j = 0; j < f2->w->m_NumPoints; j++)
+					for (unsigned int j = 0; j < f2->w->m_NumPoints; j++)
 					{
 						if (VectorCompareEpsilon(f2->w->m_Points[(j + 1) % f2->w->m_NumPoints], brushedge.vertexes[1], HEAL_BRUSH_EPSILON) &&
 							VectorCompareEpsilon(f2->w->m_Points[j], brushedge.vertexes[0], HEAL_BRUSH_EPSILON))
@@ -1330,9 +1330,9 @@ hullbrush_t *CreateHullBrush (const brush_t *b)
 	hullbrushvertex_t vertexes[MAXSIZE];
 	int i;
 	int j;
-	int k;
-	int e;
-	int e2;
+	unsigned int k;
+	unsigned int e;
+	unsigned int e2;
 	vec3_t origin;
 	bool failed = false;
 

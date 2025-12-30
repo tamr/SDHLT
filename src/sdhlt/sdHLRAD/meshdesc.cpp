@@ -793,7 +793,7 @@ bool CMeshDesc :: AddMeshTrinagle( const mvert_t triangle[3], mstudiotexture_t *
 	if( m_iNumTris <= 0 )
 		return false; // were not in a build mode!
 
-	if( m_mesh.numfacets >= m_iNumTris )
+	if( m_mesh.numfacets >= (unsigned int)m_iNumTris )
 	{
 		Developer( DEVELOPER_LEVEL_ERROR, "AddMeshTriangle: %s overflow (%i >= %i)\n", m_debugName, m_mesh.numfacets, m_iNumTris );
 		return false;
@@ -985,7 +985,7 @@ bool CMeshDesc :: FinishMeshBuild( void )
 		Developer( DEVELOPER_LEVEL_ERROR, "FinishMeshBuild: failed to build triangle mesh (no sides)\n" );
 		return false;
 	}
-	int i;
+	unsigned int i;
 
 #ifdef AABB_OFFSET
 	for( i = 0; i < 3; i++ )
@@ -1044,7 +1044,7 @@ bool CMeshDesc :: FinishMeshBuild( void )
 		// create tree
 		CreateAreaNode( 0, m_mesh.mins, m_mesh.maxs );
 
-		for( int i = 0; i < m_mesh.numfacets; i++ )
+		for( unsigned int i = 0; i < m_mesh.numfacets; i++ )
 			RelinkFacet( &m_mesh.facets[i] );
 	}
 
@@ -1062,7 +1062,7 @@ bool CMeshDesc :: FinishMeshBuild( void )
 void CMeshDesc :: FreeMeshBuild( void )
 {
 	// no reason to keep these arrays
-	for( int i = 0; facets && i < m_mesh.numfacets; i++ )
+	for( unsigned int i = 0; facets && i < m_mesh.numfacets; i++ )
 		free( facets[i].indices );
 
 	free( planehash );

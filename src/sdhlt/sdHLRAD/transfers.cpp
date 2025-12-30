@@ -23,7 +23,7 @@ void            writetransfers(const char* const transferfile, const long total_
     file = fopen(transferfile, "w+b");
     if (file != NULL)
     {
-        unsigned        amtwritten;
+        size_t          amtwritten;
         patch_t*        patch;
 
         Log("Writing transfers file [%s]\n", transferfile);
@@ -103,7 +103,7 @@ bool            readtransfers(const char* const transferfile, const long numpatc
     file = fopen(transferfile, "rb");
     if (file != NULL)
     {
-        unsigned        amtread;
+        size_t          amtread;
         patch_t*        patch;
 
         Log("Reading transfers file [%s]\n", transferfile);

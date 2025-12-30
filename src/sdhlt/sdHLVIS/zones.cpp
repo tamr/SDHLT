@@ -78,7 +78,7 @@ Zones* MakeZones(void)
     // Note: we arent looping through entities because we only care if it has a winding/bounding box
 
     // First count the number of func_vis's
-    for (x=0; x<g_nummodels; x++)
+    for (x=0; x<(UINT32)g_nummodels; x++)
     {
         entity_t*       ent = EntityForModel(x);
 
@@ -103,7 +103,7 @@ Zones* MakeZones(void)
 
     Zones* zones = new Zones(func_vis_count);
 
-    for (x=0; x<g_nummodels; x++)
+    for (x=0; x<(UINT32)g_nummodels; x++)
     {
         dmodel_t*       mod = g_dmodels + x;
         entity_t*       ent = EntityForModel(x);
@@ -129,8 +129,8 @@ Zones* MakeZones(void)
                 UINT32          j;
                 BoundingBox     bounds;
                 dface_t*        f = g_dfaces + mod->firstface;
-            
-                for (j = 0; j < mod->numfaces; j++, f++)
+
+                for (j = 0; j < (UINT32)mod->numfaces; j++, f++)
                 {
                     Winding*        w = WindingFromFace(f);
                     UINT32          k;
