@@ -140,6 +140,13 @@ void LoadStudioModels( void )
 
 			if( !model || !*model )
 				continue;
+
+			// Skip brush models - zhlt_studioshadow only works with studio models (.mdl)
+			if( model[0] == '*' )
+			{
+				Developer( DEVELOPER_LEVEL_WARNING, "Entity #%d %s has zhlt_studioshadow but uses brush model %s (zhlt_studioshadow only works with studio models)\n", i, name, model );
+				continue;
+			}
 		}
 		else
 		{
