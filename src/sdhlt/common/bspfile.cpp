@@ -8,6 +8,10 @@
 #include "scriplib.h"
 #include "blockmem.h"
 
+#include <set>
+#include <string>
+#include <vector>
+
 //=============================================================================
 
 int             g_max_map_miptex = DEFAULT_MAX_MAP_MIPTEX;
@@ -995,6 +999,190 @@ char *FindWadValue ()
 	return NULL;
 }
 
+// =====================================================================================
+//  GetBspTextureNames
+//      Returns a set of all texture names referenced by the BSP
+// =====================================================================================
+static std::set<std::string> GetBspTextureNames()
+{
+	std::set<std::string> textureNames;
+	int numtextures = g_texdatasize ? ((dmiptexlump_t*)g_dtexdata)->nummiptex : 0;
+
+	for (int i = 0; i < numtextures; i++)
+	{
+		int offset = ((dmiptexlump_t*)g_dtexdata)->dataofs[i];
+		int size = g_texdatasize - offset;
+		if (offset < 0 || size < (int)sizeof(miptex_t))
+		{
+			continue;
+		}
+		miptex_t* mt = (miptex_t*)&g_dtexdata[offset];
+		char name[17];
+		memcpy(name, mt->name, 16);
+		name[16] = '\0';
+		if (name[0] != '\0')
+		{
+			// Convert to uppercase for case-insensitive comparison
+			for (char* p = name; *p; p++)
+			{
+				*p = toupper(*p);
+			}
+			textureNames.insert(name);
+		}
+	}
+	return textureNames;
+}
+
+// WAD file structures for reading texture names
+#define MAXWADNAME 16
+typedef struct
+{
+	char identification[4];
+	int numlumps;
+	int infotableofs;
+} wadinfo_t;
+
+typedef struct
+{
+	int filepos;
+	int disksize;
+	int size;
+	char type;
+	char compression;
+	char pad1, pad2;
+	char name[MAXWADNAME];
+} lumpinfo_t;
+
+// =====================================================================================
+//  GetWadTextureNames
+//      Returns a vector of all texture names in a WAD file
+// =====================================================================================
+static std::vector<std::string> GetWadTextureNames(const char* wadPath)
+{
+	std::vector<std::string> textureNames;
+
+	FILE* wadFile = fopen(wadPath, "rb");
+	if (!wadFile)
+	{
+		return textureNames;
+	}
+
+	wadinfo_t wadinfo;
+	if (fread(&wadinfo, sizeof(wadinfo), 1, wadFile) != 1)
+	{
+		fclose(wadFile);
+		return textureNames;
+	}
+
+	// Check for valid WAD file
+	if (strncmp(wadinfo.identification, "WAD2", 4) != 0 &&
+		strncmp(wadinfo.identification, "WAD3", 4) != 0)
+	{
+		fclose(wadFile);
+		return textureNames;
+	}
+
+	wadinfo.numlumps = LittleLong(wadinfo.numlumps);
+	wadinfo.infotableofs = LittleLong(wadinfo.infotableofs);
+
+	if (fseek(wadFile, wadinfo.infotableofs, SEEK_SET))
+	{
+		fclose(wadFile);
+		return textureNames;
+	}
+
+	for (int i = 0; i < wadinfo.numlumps; i++)
+	{
+		lumpinfo_t lump;
+		if (fread(&lump, sizeof(lumpinfo_t), 1, wadFile) != 1)
+		{
+			break;
+		}
+
+		char name[MAXWADNAME + 1];
+		memcpy(name, lump.name, MAXWADNAME);
+		name[MAXWADNAME] = '\0';
+
+		// Convert to uppercase for case-insensitive comparison
+		for (char* p = name; *p; p++)
+		{
+			*p = toupper(*p);
+		}
+
+		if (name[0] != '\0')
+		{
+			textureNames.push_back(name);
+		}
+	}
+
+	fclose(wadFile);
+	return textureNames;
+}
+
+// =====================================================================================
+//  PrintUnusedWadTextures
+//      Prints textures from required WAD files that are not used by the map
+// =====================================================================================
+static void PrintUnusedWadTextures(const char* wadvalue)
+{
+	if (!wadvalue || wadvalue[0] == '\0')
+	{
+		return;
+	}
+
+	std::set<std::string> usedTextures = GetBspTextureNames();
+	std::vector<std::pair<std::string, std::vector<std::string>>> unusedByWad;
+
+	// Parse the semicolon-separated WAD file list
+	size_t length = strlen(wadvalue);
+	char* wadlist = new char[length + 1];
+	safe_strncpy(wadlist, wadvalue, length + 1);
+
+	char* token = strtok(wadlist, ";");
+	while (token != NULL)
+	{
+		if (token[0] != '\0')
+		{
+			std::vector<std::string> wadTextures = GetWadTextureNames(token);
+			std::vector<std::string> unused;
+
+			for (const auto& texName : wadTextures)
+			{
+				if (usedTextures.find(texName) == usedTextures.end())
+				{
+					unused.push_back(texName);
+				}
+			}
+
+			if (!unused.empty())
+			{
+				char wadFileName[_MAX_PATH];
+				ExtractFile(token, wadFileName);
+				unusedByWad.push_back(std::make_pair(std::string(wadFileName), unused));
+			}
+		}
+		token = strtok(NULL, ";");
+	}
+
+	delete[] wadlist;
+
+	if (!unusedByWad.empty())
+	{
+		Log("\nUnused textures in required wad files\n");
+		Log("-------------------------------------\n");
+		for (const auto& wadPair : unusedByWad)
+		{
+			Log("[%s] %zu unused texture%s\n", wadPair.first.c_str(), wadPair.second.size(),
+				wadPair.second.size() == 1 ? "" : "s");
+			for (const auto& texName : wadPair.second)
+			{
+				Log("  %s\n", texName.c_str());
+			}
+		}
+		Log("-------------------------------------\n");
+	}
+}
+
 #define ENTRIES(a)		(sizeof(a)/sizeof(*(a)))
 #define ENTRYSIZE(a)	(sizeof(*(a)))
 
@@ -1095,6 +1283,9 @@ void            PrintBSPFileSizes()
 		Log("%s", wadvalueNewline);
 		delete[] wadvalueNewline;
 		Log("---------------------------------\n\n");
+
+		// Print unused textures from required WAD files
+		PrintUnusedWadTextures(wadvalue);
 	}
 	if (wadvalue)
 	{
