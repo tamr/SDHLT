@@ -26,6 +26,9 @@
 //  the volume of the node and pass into an adjacent node.
 #include <vector>
 
+// Forward declaration for content ranking (used in plane selection)
+static int      RankForContents(const int contents);
+
 int             g_maxnode_size = DEFAULT_MAXNODE_SIZE;
 
 static bool g_reportProgress = false;
@@ -450,6 +453,10 @@ static surface_t* ChooseMidPlaneFromList(surface_t* surfaces, const vec3_t mins,
 		double backcount = 0;
 		double coplanarcount = 0;
 
+		// Track content types on each side to detect potential ambiguous leafnode content
+		int frontMinRank = 999, frontMaxRank = -1;
+		int backMinRank = 999, backMaxRank = -1;
+
 		TestSurfaceTree (surfacetree, plane);
 		frontcount += surfacetree->result.frontsize;
 		backcount += surfacetree->result.backsize;
@@ -465,7 +472,8 @@ static surface_t* ChooseMidPlaneFromList(surface_t* surfaces, const vec3_t mins,
 				coplanarcount++;
 				continue;
 			}
-			switch (FaceSide (f, plane))
+			int side = FaceSide (f, plane);
+			switch (side)
 			{
 			case SIDE_FRONT:
 				frontcount++;
@@ -477,6 +485,22 @@ static surface_t* ChooseMidPlaneFromList(surface_t* surfaces, const vec3_t mins,
 				crosscount++;
 				break;
 			}
+
+			// Track content ranks for non-detail faces
+			if (!f->detaillevel && f->contents != CONTENTS_HINT)
+			{
+				int rank = RankForContents(f->contents);
+				if (side == SIDE_FRONT || side == SIDE_ON)
+				{
+					if (rank < frontMinRank) frontMinRank = rank;
+					if (rank > frontMaxRank) frontMaxRank = rank;
+				}
+				if (side == SIDE_BACK || side == SIDE_ON)
+				{
+					if (rank < backMinRank) backMinRank = rank;
+					if (rank > backMaxRank) backMaxRank = rank;
+				}
+			}
 		}
 
 		double frontsize = frontcount + 0.5 * coplanarcount + 0.5 * crosscount;
@@ -486,6 +510,15 @@ static surface_t* ChooseMidPlaneFromList(surface_t* surfaces, const vec3_t mins,
 		value = crosscount + 0.1 * (frontsize * (log (frontfrac) / log (2.0)) + backsize * (log (backfrac) / log (2.0)));
 		// the first part is how the split will increase the number of faces
 		// the second part is how the split will increase the average depth of the bsp tree
+
+		// Add penalty for content mixing - prefer planes that separate different content types
+		// This helps prevent "Ambiguous leafnode content" warnings
+		bool frontMixed = (frontMinRank != 999 && frontMaxRank != -1 && frontMinRank != frontMaxRank);
+		bool backMixed = (backMinRank != 999 && backMaxRank != -1 && backMinRank != backMaxRank);
+		if (frontMixed || backMixed)
+		{
+			value += 5.0;
+		}
 
         if (value > bestvalue)
         {
@@ -560,6 +593,10 @@ static surface_t* ChoosePlaneFromList(surface_t* surfaces, const vec3_t mins, co
 		double coplanarcount = 0;
 		double epsilonsplit = 0;
 
+		// Track content types on each side to detect potential ambiguous leafnode content
+		int frontMinRank = 999, frontMaxRank = -1;
+		int backMinRank = 999, backMaxRank = -1;
+
 		plane = &g_dplanes[p->planenum];
 
 		for (f = p->faces; f; f = f->next)
@@ -586,9 +623,8 @@ static surface_t* ChoosePlaneFromList(surface_t* surfaces, const vec3_t mins, co
 					FaceSide (f, plane, &epsilonsplit);
 					continue;
 				}
-				switch (FaceSide(f, plane
-					, &epsilonsplit
-					))
+				int side = FaceSide(f, plane, &epsilonsplit);
+				switch (side)
 				{
 				case SIDE_FRONT:
 					frontcount++;
@@ -600,6 +636,22 @@ static surface_t* ChoosePlaneFromList(surface_t* surfaces, const vec3_t mins, co
 					totalsplit++;
 					crosscount++;
 					break;
+				}
+
+				// Track content ranks for non-detail faces
+				if (!f->detaillevel && f->contents != CONTENTS_HINT)
+				{
+					int rank = RankForContents(f->contents);
+					if (side == SIDE_FRONT || side == SIDE_ON)
+					{
+						if (rank < frontMinRank) frontMinRank = rank;
+						if (rank > frontMaxRank) frontMaxRank = rank;
+					}
+					if (side == SIDE_BACK || side == SIDE_ON)
+					{
+						if (rank < backMinRank) backMinRank = rank;
+						if (rank > backMaxRank) backMaxRank = rank;
+					}
 				}
 			}
 		}
@@ -616,6 +668,18 @@ static surface_t* ChoosePlaneFromList(surface_t* surfaces, const vec3_t mins, co
 		double ent = (0.0001 < frac && frac < 0.9999)? (- frac * log (frac) / log (2.0) - (1 - frac) * log (1 - frac) / log (2.0)): 0.0; // the formula tends to 0 when frac=0,1
 		tmpvalue[p->planenum][1] = crosscount * (1 - ent);
 		value += epsilonsplit * 10000;
+
+		// Add penalty for content mixing - prefer planes that separate different content types
+		// This helps prevent "Ambiguous leafnode content" warnings
+		bool frontMixed = (frontMinRank != 999 && frontMaxRank != -1 && frontMinRank != frontMaxRank);
+		bool backMixed = (backMinRank != 999 && backMaxRank != -1 && backMinRank != backMaxRank);
+		if (frontMixed || backMixed)
+		{
+			// Add a moderate penalty for content mixing
+			// The penalty is significant but not overwhelming, so we prefer content separation
+			// when the cost is similar, but don't sacrifice too much BSP quality
+			value += 5.0;
+		}
 
 		tmpvalue[p->planenum][0] = value;
 	}
