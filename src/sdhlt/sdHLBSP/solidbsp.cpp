@@ -1078,121 +1078,6 @@ static int      ContentsForRank(const int rank)
 }
 
 // =====================================================================================
-//  FindContentSeparatingSurface
-//      When a leaf has faces with different content types, try to find a surface
-//      whose plane could separate the content types. This allows automatic fixing
-//      of "Ambiguous leafnode content" warnings.
-//
-//      Faces from USED surfaces (onnode != NULL) form the leaf boundary and have content.
-//      We try to find an UNUSED surface (onnode == NULL) whose plane separates the
-//      different content types.
-// =====================================================================================
-static surface_t* FindContentSeparatingSurface(surface_t* planelist, node_t* leafnode)
-{
-    face_t* f;
-    surface_t* surf;
-    surface_t* bestsurf = NULL;
-
-    // First, collect content types and their ranks from faces on USED surfaces
-    // (these are the faces that form the boundary of the leaf)
-    int minRank = 999, maxRank = -1;
-    for (surf = planelist; surf; surf = surf->next)
-    {
-        if (!surf->onnode)  // Only look at surfaces that HAVE been used as splitters
-            continue;
-        for (f = surf->faces; f; f = f->next)
-        {
-            if (f->contents == CONTENTS_HINT)
-                continue;
-            if (f->detaillevel)
-                continue;
-            int r = RankForContents(f->contents);
-            if (r < minRank) minRank = r;
-            if (r > maxRank) maxRank = r;
-        }
-    }
-
-    // If all faces have the same rank, no separation needed
-    if (minRank == maxRank || minRank == 999 || maxRank == -1)
-        return NULL;
-
-    // Try to find an UNUSED surface whose plane separates the content types
-    // A good separator would put all high-rank content on one side and low-rank on the other
-    for (surf = planelist; surf; surf = surf->next)
-    {
-        if (surf->onnode)   // Only consider surfaces that haven't been used yet
-            continue;
-
-        dplane_t* plane = &g_dplanes[surf->planenum];
-
-        int highRankFront = 0, highRankBack = 0;
-        int lowRankFront = 0, lowRankBack = 0;
-        bool hasCross = false;
-
-        // Test all faces from USED surfaces against this potential splitting plane
-        for (surface_t* testsurf = planelist; testsurf; testsurf = testsurf->next)
-        {
-            if (!testsurf->onnode)  // Only test faces from USED surfaces
-                continue;
-            for (f = testsurf->faces; f; f = f->next)
-            {
-                if (f->contents == CONTENTS_HINT)
-                    continue;
-                if (f->detaillevel)
-                    continue;
-
-                int r = RankForContents(f->contents);
-                bool isHighRank = (r == maxRank);
-
-                // Check which side of the plane this face is on
-                int side = FaceSide(f, plane);
-
-                if (side == SIDE_FRONT)
-                {
-                    if (isHighRank) highRankFront++;
-                    else lowRankFront++;
-                }
-                else if (side == SIDE_BACK)
-                {
-                    if (isHighRank) highRankBack++;
-                    else lowRankBack++;
-                }
-                else // SIDE_ON - face crosses the plane
-                {
-                    hasCross = true;
-                }
-            }
-        }
-
-        // Check if this plane separates the content types
-        // All high-rank on one side and all low-rank on the other
-        bool separatesFrontBack = (highRankFront > 0 && lowRankBack > 0 &&
-                                   highRankBack == 0 && lowRankFront == 0);
-        bool separatesBackFront = (highRankBack > 0 && lowRankFront > 0 &&
-                                   highRankFront == 0 && lowRankBack == 0);
-
-        if ((separatesFrontBack || separatesBackFront) && !hasCross)
-        {
-            bestsurf = surf;
-            break; // Found a perfect separator
-        }
-
-        // Accept imperfect separators if they reduce mixing significantly
-        if (!bestsurf && !hasCross)
-        {
-            int mixing = (highRankFront > 0 && lowRankFront > 0 ? 1 : 0) +
-                        (highRankBack > 0 && lowRankBack > 0 ? 1 : 0);
-            if (mixing < 2) // At most one side has mixing
-            {
-                bestsurf = surf;
-            }
-        }
-    }
-
-    return bestsurf;
-}
-
-// =====================================================================================
 //  FreeLeafSurfs
 // =====================================================================================
 static void     FreeLeafSurfs(node_t* leaf)
@@ -1267,13 +1152,11 @@ const char*     ContentsToString(int contents)
         return "UNKNOWN";
     }
 }
-// Returns true if mixed content was detected (and warning was issued)
-static bool     LinkLeafFaces(surface_t* planelist, node_t* leafnode)
+static void     LinkLeafFaces(surface_t* planelist, node_t* leafnode)
 {
     face_t*         f;
     surface_t*      surf;
     int             rank, r;
-    bool            hasMixedContent = false;
 
     rank = -1;
     for (surf = planelist; surf; surf = surf->next)
@@ -1320,24 +1203,23 @@ static bool     LinkLeafFaces(surface_t* planelist, node_t* leafnode)
 	}
 	if (surf)
 	{
-		hasMixedContent = true;
 		entity_t *ent = EntityForModel (g_nummodels - 1);
 		if (g_nummodels - 1 != 0 && ent == &g_entities[0])
 		{
 			ent = NULL;
 		}
-		Warning ("Ambiguous leafnode content ( %s and %s ) at (%.0f,%.0f,%.0f)-(%.0f,%.0f,%.0f) in hull %d of model %d (entity: classname \"%s\", origin \"%s\", targetname \"%s\")",
-			ContentsToString (ContentsForRank(r)), ContentsToString (ContentsForRank(rank)),
-			leafnode->mins[0], leafnode->mins[1], leafnode->mins[2], leafnode->maxs[0], leafnode->maxs[1], leafnode->maxs[2],
-			g_hullnum, g_nummodels - 1,
-			(ent? ValueForKey (ent, "classname"): "unknown"),
-			(ent? ValueForKey (ent, "origin"): "unknown"),
+		Warning ("Ambiguous leafnode content ( %s and %s ) at (%.0f,%.0f,%.0f)-(%.0f,%.0f,%.0f) in hull %d of model %d (entity: classname \"%s\", origin \"%s\", targetname \"%s\")", 
+			ContentsToString (ContentsForRank(r)), ContentsToString (ContentsForRank(rank)), 
+			leafnode->mins[0], leafnode->mins[1], leafnode->mins[2], leafnode->maxs[0], leafnode->maxs[1], leafnode->maxs[2], 
+			g_hullnum, g_nummodels - 1, 
+			(ent? ValueForKey (ent, "classname"): "unknown"), 
+			(ent? ValueForKey (ent, "origin"): "unknown"), 
 			(ent? ValueForKey (ent, "targetname"): "unknown"));
 		for (surface_t *surf2 = planelist; surf2; surf2 = surf2->next)
 		{
 			for (face_t *f2 = surf2->faces; f2; f2 = f2->next)
 			{
-				Developer (DEVELOPER_LEVEL_SPAM, "content = %d plane = %d normal = (%g,%g,%g)\n", f2->contents, f2->planenum,
+				Developer (DEVELOPER_LEVEL_SPAM, "content = %d plane = %d normal = (%g,%g,%g)\n", f2->contents, f2->planenum, 
 					g_dplanes[f2->planenum].normal[0], g_dplanes[f2->planenum].normal[1], g_dplanes[f2->planenum].normal[2]);
 				for (int i = 0; i < f2->numpoints; i++)
 				{
@@ -1348,7 +1230,7 @@ static bool     LinkLeafFaces(surface_t* planelist, node_t* leafnode)
 	}
 
     leafnode->contents = ContentsForRank(rank);
-    return hasMixedContent;
+
 }
 static void MakeLeaf (node_t *leafnode)
 {
@@ -1722,24 +1604,10 @@ static void     BuildBspTree_r(node_t* node)
 	if (!node->isdetail && (!split || split->detaillevel > 0))
 	{
 		node->isportalleaf = true;
-		bool hasMixedContent = LinkLeafFaces (node->surfaces, node); // set contents
+		LinkLeafFaces (node->surfaces, node); // set contents
 		if (node->contents == CONTENTS_SOLID)
 		{
 			split = NULL;
-		}
-		// If we have mixed content and no split, try to find a content-separating surface
-		if (hasMixedContent && !split)
-		{
-			surface_t* contentSplit = FindContentSeparatingSurface(node->surfaces, node);
-			if (contentSplit)
-			{
-				// Found a surface that can separate content types - use it for additional splitting
-				Developer(DEVELOPER_LEVEL_MESSAGE, "Auto-fixing ambiguous leafnode by adding content-separating split at (%.0f,%.0f,%.0f)-(%.0f,%.0f,%.0f)\n",
-					node->mins[0], node->mins[1], node->mins[2], node->maxs[0], node->maxs[1], node->maxs[2]);
-				split = contentSplit;
-				// Reset isportalleaf since we're continuing to split
-				node->isportalleaf = false;
-			}
 		}
 	}
 	else
